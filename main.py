@@ -33,13 +33,12 @@ import numpy as np
 # In[3]:
 
 
-jpet_edge_index = pd.read_csv('fin_target.csv')
-jpet_one_hot = pd.read_csv('weight_jpet.csv',index_col=0)
-#jpet_one_hot = pd.read_csv('jpet/test1.csv',index_col=0)
+jpet_edge_index = pd.read_csv('jpet/data.csv')
+jpet_adjmatrix = pd.read_csv('weight.csv',index_col=0)
 
 
 edge_index  = torch.tensor(jpet_edge_index.values,dtype=torch.long)
-x = torch.tensor(jpet_one_hot.values, dtype=torch.float)
+x = torch.tensor(jpet_adjmatrix.values, dtype=torch.float)
 data = Data(x=x, edge_index=edge_index.t().contiguous())
 data
 
@@ -136,7 +135,7 @@ def train():
 
 @torch.no_grad()
 def test():
-    G=nx.from_pandas_adjacency(jpet_one_hot, create_using = nx.karate_club_graph())
+    G=nx.from_pandas_adjacency(jpet_adjmatrix, create_using = nx.karate_club_graph())
     G = nx.relabel_nodes(G, { n:str(n) for n in G.nodes()})
     model.eval()
     z = model.encode(data.x, data.train_pos_edge_index)
@@ -145,17 +144,17 @@ def test():
     
     #Kmeans
    
-    kmeans = KMeans(n_clusters=4, random_state=0).fit(cluster_input)
+    #kmeans = KMeans(n_clusters=3, random_state=0).fit(cluster_input)
     
     #hier
-    #ag = AgglomerativeClustering(n_clusters=4)
+    #ag = AgglomerativeClustering(n_clusters=3)
     #aoc = ag.fit(cluster_input)
     
     #EM
-    #gmm = GaussianMixture(n_components=4, random_state=0).fit(cluster_input)
-    #gmm_labels = gmm.predict(cluster_input)
+    gmm = GaussianMixture(n_components=3, random_state=0).fit(cluster_input)
+    gmm_labels = gmm.predict(cluster_input)
     
-    for n, label in zip(jpet_one_hot.index.values, kmeans.labels_):
+    for n, label in zip(jpet_adjmatrix.index.values, gmm_labels):
             G.nodes[n]['label'] = label
     
     plt.figure(figsize=(12, 6))
@@ -168,14 +167,14 @@ def test():
     
     result_pd = pd.DataFrame(result_data)
     
-#    result_pd.to_csv("kmeans_data.csv")
+    result_pd.to_csv("EM_data.csv")
     
     
-#    plt.savefig('no_abstract_K.png')
+    plt.savefig('no_abstract_E.png')
     plt.show()
 
 
-# In[12]:
+# In[13]:
 
 
 for epoch in range(1, 220):
